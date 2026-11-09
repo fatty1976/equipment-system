@@ -1,6 +1,8 @@
 from base64 import b64decode, b64encode
 from datetime import date
+from io import BytesIO
 import pandas as pd
+from PIL import Image
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import streamlit as st
@@ -71,14 +73,36 @@ def update_row_status(worksheet_name, row_id, new_status, return_date=""):
       ws.update_cell(row_num, 7, new_status)
 
 
-# --- 2. ตั้งค่า CSS และฟอนต์ Saraban (แก้ไขปุ่มอัปโหลดไม่ให้ทับกัน) ---
+# --- ฟังก์ชันย่อขนาดรูปภาพอัตโนมัติไม่ให้เกินโควต้า Google Sheets ---
+def compress_image(image_file):
+  try:
+    img = Image.open(image_file)
+    # แปลงเป็น RGB เสมอ (ป้องกันเคสไฟล์ PNG มี Alpha channel แล้วแปลงไม่ได้)
+    if img.mode in ("RGBA", "P"):
+      img = img.convert("RGB")
+
+    # ย่อขนาดความกว้างไม่ให้เกิน 300 พิกเซล (เพียงพอสำหรับแสดงผลในระบบ)
+    max_width = 300
+    if img.width > max_width:
+      ratio = max_width / float(img.width)
+      new_height = int(float(img.height) * ratio)
+      img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+
+    # บันทึกลงหน่วยความจำแบบบีบอัด JPEG คุณภาพ 70%
+    buffered = BytesIO()
+    img.save(buffered, format="JPEG", quality=70)
+    return b64encode(buffered.getvalue()).decode("utf-8")
+  except Exception:
+    return ""
+
+
+# --- 2. ตั้งค่า CSS และฟอนต์ Saraban ---
 st.markdown(
     """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
         * { font-family: 'Sarabun', sans-serif !important; }
         
-        /* ยกเว้นปุ่มอัปโหลดไฟล์ให้ใช้ฟอนต์ปกติ เพื่อป้องกันตัวหนังสือซ้อน */
         [data-testid='stFileUploader'] * {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
         }
@@ -230,8 +254,8 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
     if submit and eq_name:
       image_string = ""
       if uploaded_file is not None:
-        bytes_data = uploaded_file.getvalue()
-        image_string = b64encode(bytes_data).decode("utf-8")
+        # เรียกใช้ฟังก์ชันย่อขนาดรูปภาพอัตโนมัติ
+        image_string = compress_image(uploaded_file)
 
       new_id = (
           1
