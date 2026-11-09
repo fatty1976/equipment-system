@@ -77,18 +77,15 @@ def update_row_status(worksheet_name, row_id, new_status, return_date=""):
 def compress_image(image_file):
   try:
     img = Image.open(image_file)
-    # แปลงเป็น RGB เสมอ (ป้องกันเคสไฟล์ PNG มี Alpha channel แล้วแปลงไม่ได้)
     if img.mode in ("RGBA", "P"):
       img = img.convert("RGB")
 
-    # ย่อขนาดความกว้างไม่ให้เกิน 300 พิกเซล (เพียงพอสำหรับแสดงผลในระบบ)
     max_width = 300
     if img.width > max_width:
       ratio = max_width / float(img.width)
       new_height = int(float(img.height) * ratio)
       img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
 
-    # บันทึกลงหน่วยความจำแบบบีบอัด JPEG คุณภาพ 70%
     buffered = BytesIO()
     img.save(buffered, format="JPEG", quality=70)
     return b64encode(buffered.getvalue()).decode("utf-8")
@@ -240,33 +237,51 @@ elif choice == "📋 รายการอุปกรณ์ทั้งหม�
 # --- เมนูที่ 3: เพิ่มอุปกรณ์ใหม่ ---
 elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
   st.subheader("➕ เพิ่มกายอุปกรณ์เข้าคลัง")
-  with st.form("add_eq_form"):
-    eq_name = st.text_input("ชื่ออุปกรณ์ (เช่น รถเข็นอลูมิเนียมพับได้)")
-    category = st.selectbox(
-        "หมวดหมู่", ["รถเข็น (Wheelchair)", "ไม้เท้า/ไม้ค้ำ", "เตียงผู้ป่วย", "อื่นๆ"]
-    )
-    uploaded_file = st.file_uploader(
-        "อัปโหลดรูปภาพอุปกรณ์ (จากมือถือหรือคอมพิวเตอร์)",
-        type=["png", "jpg", "jpeg"],
-    )
-    submit = st.form_submit_button("💾 บันทึกข้อมูล")
 
-    if submit and eq_name:
-      image_string = ""
-      if uploaded_file is not None:
-        # เรียกใช้ฟังก์ชันย่อขนาดรูปภาพอัตโนมัติ
-        image_string = compress_image(uploaded_file)
+  # ใช้ตัวแปร Session State เพื่อจัดการสถานะการบันทึกสำเร็จ
+  if "save_success" not in st.session_state:
+    st.session_state.save_success = False
 
-      new_id = (
-          1
-          if df_equipments.empty
-          else int(df_equipments["id"].max()) + 1
-      )
-      add_row(
-          "equipments", [new_id, eq_name, category, "พร้อมใช้งาน", image_string]
-      )
-      st.success(f"เพิ่มอุปกรณ์ '{eq_name}' เรียบร้อยแล้ว!")
+  if st.session_state.save_success:
+    st.success("🎉 บันทึกข้อมูลอุปกรณ์เรียบร้อยแล้ว! พร้อมสำหรับเพิ่มชิ้นถัดไป")
+    if st.button("➕ เพิ่มอุปกรณ์ชิ้นใหม่"):
+      st.session_state.save_success = False
       st.rerun()
+  else:
+    with st.form("add_eq_form"):
+      eq_name = st.text_input("ชื่ออุปกรณ์ (เช่น รถเข็นอลูมิเนียมพับได้)")
+      category = st.selectbox(
+          "หมวดหมู่",
+          ["รถเข็น (Wheelchair)", "ไม้เท้า/ไม้ค้ำ", "เตียงผู้ป่วย", "อื่นๆ"],
+      )
+      uploaded_file = st.file_uploader(
+          "อัปโหลดรูปภาพอุปกรณ์ (จากมือถือหรือคอมพิวเตอร์)",
+          type=["png", "jpg", "jpeg"],
+      )
+      submit = st.form_submit_button("💾 บันทึกข้อมูล")
+
+      if submit:
+        if not eq_name.strip():
+          st.warning("⚠️ กรุณากรอกชื่ออุปกรณ์ก่อนบันทึก")
+        else:
+          with st.spinner("กำลังบันทึกข้อมูลและประมวลผลรูปภาพ..."):
+            image_string = ""
+            if uploaded_file is not None:
+              image_string = compress_image(uploaded_file)
+
+            new_id = (
+                1
+                if df_equipments.empty
+                else int(df_equipments["id"].max()) + 1
+            )
+            add_row(
+                "equipments",
+                [new_id, eq_name, category, "พร้อมใช้งาน", image_string],
+            )
+
+          # ตั้งค่าสถานะเป็น True เพื่อแสดงหน้าต่างสำเร็จและหยุดฟอร์มชั่วคราว
+          st.session_state.save_success = True
+          st.rerun()
 
 # --- เมนูที่ 4: ทำรายการยืม ---
 elif choice == "📝 ทำรายการยืม":
