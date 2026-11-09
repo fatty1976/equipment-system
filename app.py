@@ -121,6 +121,22 @@ st.markdown(
             background-color: #f8f9fa;
             padding: 3px;
         }
+        
+        .main-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        .main-header img {
+            height: 55px;
+            width: auto;
+        }
+        .main-header h2 {
+            margin: 0;
+            padding: 0;
+            font-weight: 700;
+        }
     </style>
 """,
     unsafe_allow_html=True,
@@ -145,18 +161,27 @@ df_borrowings = get_data("borrowings")
 
 # --- เมนูที่ 1: แดชบอร์ดภาพรวม ---
 if choice == "📊 ภาพรวมกายอุปกรณ์":
-  # จัดวางโลโก้ (moph-logo.gif) และหัวข้อให้อยู่บรรทัดเดียวกัน
-  col_logo, col_title = st.columns([1, 10])
-  with col_logo:
-    try:
-      st.image("moph-logo.gif", width=65)
-    except Exception:
-      st.write("🏥")
-  with col_title:
+  # แปลงไฟล์ GIF เป็น Base64 เพื่อให้เบราว์เซอร์เรนเดอร์ภาพเคลื่อนไหวผ่าน HTML ได้สมบูรณ์
+  try:
+    with open("moph-logo.gif", "rb") as f:
+      gif_bytes = f.read()
+      gif_base64 = b64encode(gif_bytes).decode("utf-8")
+      gif_url = f"data:image/gif;base64,{gif_base64}"
+  except Exception:
+    gif_url = ""
+
+  if gif_url:
     st.markdown(
-        "<h2 style='margin: 0; padding-top: 8px;'>ระบบยืม-คืนกายอุปกรณ์จำแนกตามชนิด</h2>",
+        f"""
+        <div class="main-header">
+            <img src="{gif_url}" alt="MOPH Logo">
+            <h2>ระบบยืม-คืนกายอุปกรณ์จำแนกตามชนิด</h2>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
+  else:
+    st.markdown("<h2>🏥 ระบบยืม-คืนกายอุปกรณ์จำแนกตามชนิด</h2>", unsafe_allow_html=True)
 
   st.write("")
 
