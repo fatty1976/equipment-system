@@ -111,24 +111,24 @@ st.markdown(
             color: white; 
             margin-bottom: 15px; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-            min-height: 130px;
+            min-height: 140px;
         }
         .card-wheelchair { background: linear-gradient(135deg, #1e7e34, #28a745); }
         .card-crutches { background: linear-gradient(135deg, #d39e00, #ffc107); color: #333 !important; }
         .card-bed { background: linear-gradient(135deg, #117a8b, #17a2b8); }
         .card-other { background: linear-gradient(135deg, #5a6268, #6c757d); }
         
-        /* ขยายขนาดรูปไอคอนให้ใหญ่ชัดเจนขึ้น (85px) และเว้นพื้นที่ข้อความด้านซ้าย */
+        /* ขยายขนาดรูปไอคอนเป็น 95px และเว้นระยะข้อความไม่ให้ทับ */
         .card-icon-img { 
             position: absolute;
             top: 15px;
             right: 15px;
-            width: 85px;
-            height: 85px;
+            width: 95px;
+            height: 95px;
             object-fit: contain;
         }
-        .card-title { font-size: 17px; font-weight: 600; margin-bottom: 5px; padding-right: 90px; }
-        .card-value { font-size: 22px; font-weight: 700; margin-bottom: 3px; padding-right: 90px; }
+        .card-title { font-size: 17px; font-weight: 600; margin-bottom: 5px; padding-right: 100px; }
+        .card-value { font-size: 22px; font-weight: 700; margin-bottom: 3px; padding-right: 100px; }
         .card-sub { font-size: 13px; opacity: 0.95; }
         
         .equipment-img img {
@@ -203,7 +203,6 @@ if choice == "📊 ภาพรวมกายอุปกรณ์":
 
   st.write("")
 
-  # กำหนดชื่อหมวดหมู่, คลาสสี, และไฟล์ไอคอนที่ตรงกัน
   categories = [
       ("รถเข็น (Wheelchair)", "card-wheelchair", "icon-wheelchair.png"),
       ("ไม้เท้า/ไม้ค้ำ", "card-crutches", "icon-crutches.png"),
@@ -235,7 +234,6 @@ if choice == "📊 ภาพรวมกายอุปกรณ์":
       else:
         total_cat, avail_cat, borrow_cat = 0, 0, 0
 
-      # แปลงไฟล์ไอคอนเป็น Base64 เพื่อให้แสดงผลผ่าน HTML ได้อย่างไร้รอยต่อ
       icon_base64_str = ""
       try:
         with open(icon_filename, "rb") as img_f:
