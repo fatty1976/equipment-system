@@ -1,3 +1,4 @@
+from base64 import b64decode, b64encode
 from datetime import date
 import pandas as pd
 import gspread
@@ -94,7 +95,7 @@ st.sidebar.title("📌 เมนูระบบ")
 choice = st.sidebar.radio(
     "เลือกการทำงาน",
     [
-        "📊 ภาพรวมกายอุปกรณ์",
+        "📊 แดชบอร์ดภาพรวม",
         "📋 รายการอุปกรณ์ทั้งหมด",
         "➕ เพิ่มอุปกรณ์ใหม่",
         "📝 ทำรายการยืม",
@@ -107,18 +108,18 @@ df_equipments = get_data("equipments")
 df_borrowings = get_data("borrowings")
 
 # --- เมนูที่ 1: แดชบอร์ดภาพรวม ---
-if choice == "📊 ภาพรวมกายอุปกรณ์":
-  st.title("📊 ระบบยืม-คืนกายอุปกรณ์จำแนกตามชนิด")
+if choice == "📊 แดชบอร์ดภาพรวม":
+  st.title("📊 ภาพรวมกายอุปกรณ์จำแนกตามชนิด")
   st.write("")
 
   categories = [
-      ("รถเข็น(Wheelchair)", "card-wheelchair", "🦽"),
-      ("ไม้เท้า(Walker)/ไม้ค้ำยัน", "card-crutches", "🦯"),
+      ("รถเข็น (Wheelchair)", "card-wheelchair", "🦽"),
+      ("ไม้เท้า/ไม้ค้ำ", "card-crutches", "🦯"),
       ("เตียงผู้ป่วย", "card-bed", "🛏️"),
       ("อื่นๆ", "card-other", "📦"),
   ]
 
-  st.subheader("📦 สรุปยอดจำแนกตามชนิดกายอุปกรณ์")
+  st.subheader("📦 สรุปยอดแยกตามชนิดกายอุปกรณ์")
   cols = st.columns(4)
 
   for i, (cat_name, css_class, icon_emoji) in enumerate(categories):
@@ -163,13 +164,24 @@ if choice == "📊 ภาพรวมกายอุปกรณ์":
       with st.container():
         col_img, col_info = st.columns([1, 4])
         with col_img:
-          img_url = (
+          img_data = (
               row.get("image_url", "")
               if "image_url" in df_equipments.columns
               else ""
           )
-          if img_url and str(img_url).startswith("http"):
-            st.image(img_url, width=120)
+          if img_data:
+            try:
+              # ตรวจสอบว่าเป็น Base64 หรือลิงก์เว็บปกติ
+              if str(img_data).startswith("data:image"):
+                st.image(img_data, width=120)
+              elif str(img_data).startswith("http"):
+                st.image(img_data, width=120)
+              else:
+                # ถอดรหัส Base64 กรณีเก็บเป็นสตริงไบต์
+                image_bytes = b64decode(img_data)
+                st.image(image_bytes, width=120)
+            except Exception:
+              st.markdown("🖼️ *แสดงรูปไม่ได้*")
           else:
             st.markdown("🖼️ *ไม่มีรูปภาพ*")
         with col_info:
@@ -205,18 +217,30 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
     category = st.selectbox(
         "หมวดหมู่", ["รถเข็น (Wheelchair)", "ไม้เท้า/ไม้ค้ำ", "เตียงผู้ป่วย", "อื่นๆ"]
     )
-    image_url = st.text_input(
-        "ลิงก์รูปภาพอุปกรณ์ (Image URL เช่น จาก ImgBB หรือเว็บฝากรูป)"
+
+    # เพิ่มปุ่มอัปโหลดรูปภาพจากเครื่องหรือมือถือ
+    uploaded_file = st.file_uploader(
+        "อัปโหลดรูปภาพอุปกรณ์ (จากมือถือหรือคอมพิวเตอร์)",
+        type=["png", "jpg", "jpeg"],
     )
+
     submit = st.form_submit_button("💾 บันทึกข้อมูล")
 
     if submit and eq_name:
+      image_string = ""
+      if uploaded_file is not None:
+        # แปลงไฟล์รูปภาพเป็น Base64 เพื่อเก็บลง Google Sheets
+        bytes_data = uploaded_file.getvalue()
+        image_string = b64encode(bytes_data).decode("utf-8")
+
       new_id = (
           1
           if df_equipments.empty
           else int(df_equipments["id"].max()) + 1
       )
-      add_row("equipments", [new_id, eq_name, category, "พร้อมใช้งาน", image_url])
+      add_row(
+          "equipments", [new_id, eq_name, category, "พร้อมใช้งาน", image_string]
+      )
       st.success(f"เพิ่มอุปกรณ์ '{eq_name}' เรียบร้อยแล้ว!")
       st.rerun()
 
