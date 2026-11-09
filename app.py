@@ -248,7 +248,7 @@ if choice == "📊 ภาพรวมกายอุปกรณ์":
             <div class="card-box {css_class}">
                 <img src="{icon_base64_str}" class="card-icon-img" alt="icon">
                 <div class="card-title">{cat_name}</div>
-                <div class="card-value">ทั้งหมด {total_cat} ชิ้น</div>
+                <div class="card-value">ทั้งหมด {total_cat} รายการ</div>
                 <div class="card-sub">✅ พร้อมใช้: {avail_cat} | 🔄 กำลังยืม: {borrow_cat}</div>
             </div>
             """,
