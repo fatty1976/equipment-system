@@ -71,12 +71,18 @@ def update_row_status(worksheet_name, row_id, new_status, return_date=""):
       ws.update_cell(row_num, 7, new_status)
 
 
-# --- 2. ตั้งค่า CSS และฟอนต์ Saraban ---
+# --- 2. ตั้งค่า CSS และฟอนต์ Saraban (แก้ไขปุ่มอัปโหลดไม่ให้ทับกัน) ---
 st.markdown(
     """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
         * { font-family: 'Sarabun', sans-serif !important; }
+        
+        /* ยกเว้นปุ่มอัปโหลดไฟล์ให้ใช้ฟอนต์ปกติ เพื่อป้องกันตัวหนังสือซ้อน */
+        [data-testid='stFileUploader'] * {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        }
+
         .card-box { padding: 20px; border-radius: 8px; color: white; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .card-wheelchair { background: linear-gradient(135deg, #1e7e34, #28a745); }
         .card-crutches { background: linear-gradient(135deg, #d39e00, #ffc107); color: #333 !important; }
@@ -85,9 +91,6 @@ st.markdown(
         .card-title { font-size: 18px; font-weight: 600; margin-bottom: 5px; }
         .card-value { font-size: 24px; font-weight: 700; }
         .card-sub { font-size: 14px; opacity: 0.95; }
-        /* แก้ไขปัญหาปุ่มอัปโหลดตัวหนังสือซ้อนกัน */
-        [data-testid='stFileUploader'] section { padding: 10px; }
-        [data-testid='stFileUploader'] button { width: auto; }
     </style>
 """,
     unsafe_allow_html=True,
