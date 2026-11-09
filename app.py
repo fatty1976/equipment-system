@@ -121,23 +121,6 @@ st.markdown(
             background-color: #f8f9fa;
             padding: 3px;
         }
-        
-        .main-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .main-header img {
-            height: 55px;
-            width: auto;
-        }
-        .main-header h1 {
-            font-size: 28px;
-            font-weight: 700;
-            margin: 0;
-            color: #1f2937;
-        }
     </style>
 """,
     unsafe_allow_html=True,
@@ -160,20 +143,21 @@ choice = st.sidebar.radio(
 df_equipments = get_data("equipments")
 df_borrowings = get_data("borrowings")
 
-# --- โลโก้กระทรวงสาธารณสุข (URL ทางการสำหรับแสดงผล) ---
-moph_logo_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Seal_of_the_Ministry_of_Public_Health_of_Thailand.svg/500px-Seal_of_the_Ministry_of_Public_Health_of_Thailand.svg.png"
-
 # --- เมนูที่ 1: แดชบอร์ดภาพรวม ---
 if choice == "📊 ภาพรวมกายอุปกรณ์":
-  st.markdown(
-      f"""
-        <div class="main-header">
-            <img src="{moph_logo_url}" alt="MOPH Logo">
-            <h1>ระบบยืม-คืนกายอุปกรณ์จำแนกตามชนิด</h1>
-        </div>
-        """,
-      unsafe_allow_html=True,
-  )
+  # จัดวางโลโก้ (moph-logo.gif) และหัวข้อให้อยู่บรรทัดเดียวกัน
+  col_logo, col_title = st.columns([1, 10])
+  with col_logo:
+    try:
+      st.image("moph-logo.gif", width=65)
+    except Exception:
+      st.write("🏥")
+  with col_title:
+    st.markdown(
+        "<h2 style='margin: 0; padding-top: 8px;'>ระบบยืม-คืนกายอุปกรณ์จำแนกตามชนิด</h2>",
+        unsafe_allow_html=True,
+    )
+
   st.write("")
 
   categories = [
