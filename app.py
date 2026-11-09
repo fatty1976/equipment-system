@@ -103,7 +103,7 @@ st.markdown(
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
         }
 
-        /* ดีไซน์การ์ดให้จัดวางข้อความซ้าย รูปภาพไอคอนขวา */
+        /* ดีไซน์การ์ดให้จัดวางข้อความซ้าย รูปภาพไอคอนใหญ่ขวา */
         .card-box { 
             position: relative;
             padding: 20px; 
@@ -111,24 +111,24 @@ st.markdown(
             color: white; 
             margin-bottom: 15px; 
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-            min-height: 120px;
+            min-height: 130px;
         }
         .card-wheelchair { background: linear-gradient(135deg, #1e7e34, #28a745); }
         .card-crutches { background: linear-gradient(135deg, #d39e00, #ffc107); color: #333 !important; }
         .card-bed { background: linear-gradient(135deg, #117a8b, #17a2b8); }
         .card-other { background: linear-gradient(135deg, #5a6268, #6c757d); }
         
-        /* จัดวางรูปไอคอนไว้มุมขวาของการ์ด คมชัดสวยงาม */
+        /* ขยายขนาดรูปไอคอนให้ใหญ่ชัดเจนขึ้น (85px) และเว้นพื้นที่ข้อความด้านซ้าย */
         .card-icon-img { 
             position: absolute;
             top: 15px;
-            right: 20px;
-            width: 55px;
-            height: 55px;
+            right: 15px;
+            width: 85px;
+            height: 85px;
             object-fit: contain;
         }
-        .card-title { font-size: 17px; font-weight: 600; margin-bottom: 5px; padding-right: 60px; }
-        .card-value { font-size: 22px; font-weight: 700; margin-bottom: 3px; }
+        .card-title { font-size: 17px; font-weight: 600; margin-bottom: 5px; padding-right: 90px; }
+        .card-value { font-size: 22px; font-weight: 700; margin-bottom: 3px; padding-right: 90px; }
         .card-sub { font-size: 13px; opacity: 0.95; }
         
         .equipment-img img {
