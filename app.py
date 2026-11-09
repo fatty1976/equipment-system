@@ -108,6 +108,9 @@ st.markdown(
         .card-crutches { background: linear-gradient(135deg, #d39e00, #ffc107); color: #333 !important; }
         .card-bed { background: linear-gradient(135deg, #117a8b, #17a2b8); }
         .card-other { background: linear-gradient(135deg, #5a6268, #6c757d); }
+        
+        /* ปรับขนาดไอคอนให้ใหญ่และชัดเจนขึ้น */
+        .card-icon { font-size: 32px; margin-bottom: 5px; line-height: 1; }
         .card-title { font-size: 18px; font-weight: 600; margin-bottom: 5px; }
         .card-value { font-size: 24px; font-weight: 700; }
         .card-sub { font-size: 14px; opacity: 0.95; }
@@ -161,7 +164,6 @@ df_borrowings = get_data("borrowings")
 
 # --- เมนูที่ 1: แดชบอร์ดภาพรวม ---
 if choice == "📊 ภาพรวมกายอุปกรณ์":
-  # แปลงไฟล์ GIF เป็น Base64 เพื่อให้เบราว์เซอร์เรนเดอร์ภาพเคลื่อนไหวผ่าน HTML ได้สมบูรณ์
   try:
     with open("moph-logo.gif", "rb") as f:
       gif_bytes = f.read()
@@ -219,7 +221,8 @@ if choice == "📊 ภาพรวมกายอุปกรณ์":
       st.markdown(
           f"""
             <div class="card-box {css_class}">
-                <div class="card-title">{icon_emoji} {cat_name}</div>
+                <div class="card-icon">{icon_emoji}</div>
+                <div class="card-title">{cat_name}</div>
                 <div class="card-value">ทั้งหมด {total_cat} ชิ้น</div>
                 <div class="card-sub">✅ พร้อมใช้: {avail_cat} | 🔄 กำลังยืม: {borrow_cat}</div>
             </div>
