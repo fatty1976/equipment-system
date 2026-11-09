@@ -73,21 +73,19 @@ def update_row_status(worksheet_name, row_id, new_status, return_date=""):
       ws.update_cell(row_num, 7, new_status)
 
 
-# --- ฟังก์ชันย่อขนาดรูปภาพอัตโนมัติไม่ให้เกินโควต้า Google Sheets ---
+# --- ฟังก์ชันย่อขนาดรูปภาพอัตโนมัติ (รองรับแนวตั้ง) ---
 def compress_image(image_file):
   try:
     img = Image.open(image_file)
     if img.mode in ("RGBA", "P"):
       img = img.convert("RGB")
 
-    max_width = 300
-    if img.width > max_width:
-      ratio = max_width / float(img.width)
-      new_height = int(float(img.height) * ratio)
-      img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+    # กำหนดขนาดพิกเซลสูงสุดไม่ให้เกิน 400 เพื่อความคมชัดและไม่เปลืองพื้นที่ Sheets
+    max_size = 400
+    img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
 
     buffered = BytesIO()
-    img.save(buffered, format="JPEG", quality=70)
+    img.save(buffered, format="JPEG", quality=75)
     return b64encode(buffered.getvalue()).decode("utf-8")
   except Exception:
     return ""
@@ -112,6 +110,14 @@ st.markdown(
         .card-title { font-size: 18px; font-weight: 600; margin-bottom: 5px; }
         .card-value { font-size: 24px; font-weight: 700; }
         .card-sub { font-size: 14px; opacity: 0.95; }
+        
+        /* ปรับสไตล์รูปภาพอุปกรณ์ให้แสดงผลสวยงามทั้งแนวตั้งและแนวนอน */
+        .equipment-img img {
+            border-radius: 8px;
+            object-fit: cover;
+            max-height: 130px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
     </style>
 """,
     unsafe_allow_html=True,
@@ -189,8 +195,9 @@ if choice == "📊 แดชบอร์ดภาพรวม":
   else:
     for index, row in df_equipments.iterrows():
       with st.container():
-        col_img, col_info = st.columns([1, 4])
+        col_img, col_info = st.columns([1, 5])
         with col_img:
+          st.markdown('<div class="equipment-img">', unsafe_allow_html=True)
           img_data = (
               row.get("image_url", "")
               if "image_url" in df_equipments.columns
@@ -199,16 +206,18 @@ if choice == "📊 แดชบอร์ดภาพรวม":
           if img_data:
             try:
               if str(img_data).startswith("data:image"):
-                st.image(img_data, width=120)
+                st.image(img_data, width=100)
               elif str(img_data).startswith("http"):
-                st.image(img_data, width=120)
+                st.image(img_data, width=100)
               else:
                 image_bytes = b64decode(img_data)
-                st.image(image_bytes, width=120)
+                st.image(image_bytes, width=100)
             except Exception:
               st.markdown("🖼️ *แสดงรูปไม่ได้*")
           else:
-            st.markdown("🖼️ *ไม่มีรูปภาพ*")
+            st.markdown("🖼️ *ไม่มีรูป*")
+          st.markdown("</div>", unsafe_allow_html=True)
+
         with col_info:
           st.markdown(f"### ID: {row['id']} - {row['name']}")
           st.write(
@@ -238,7 +247,6 @@ elif choice == "📋 รายการอุปกรณ์ทั้งหม�
 elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
   st.subheader("➕ เพิ่มกายอุปกรณ์เข้าคลัง")
 
-  # ใช้ตัวแปร Session State เพื่อจัดการสถานะการบันทึกสำเร็จ
   if "save_success" not in st.session_state:
     st.session_state.save_success = False
 
@@ -255,7 +263,7 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
           ["รถเข็น (Wheelchair)", "ไม้เท้า/ไม้ค้ำ", "เตียงผู้ป่วย", "อื่นๆ"],
       )
       uploaded_file = st.file_uploader(
-          "อัปโหลดรูปภาพอุปกรณ์ (จากมือถือหรือคอมพิวเตอร์)",
+          "อัปโหลดรูปภาพอุปกรณ์ (รองรับภาพถ่ายแนวตั้งจากมือถือ)",
           type=["png", "jpg", "jpeg"],
       )
       submit = st.form_submit_button("💾 บันทึกข้อมูล")
@@ -264,7 +272,7 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
         if not eq_name.strip():
           st.warning("⚠️ กรุณากรอกชื่ออุปกรณ์ก่อนบันทึก")
         else:
-          with st.spinner("กำลังบันทึกข้อมูลและประมวลผลรูปภาพ..."):
+          with st.spinner("กำลังบันทึกข้อมูลและปรับแต่งรูปภาพ..."):
             image_string = ""
             if uploaded_file is not None:
               image_string = compress_image(uploaded_file)
@@ -279,7 +287,6 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
                 [new_id, eq_name, category, "พร้อมใช้งาน", image_string],
             )
 
-          # ตั้งค่าสถานะเป็น True เพื่อแสดงหน้าต่างสำเร็จและหยุดฟอร์มชั่วคราว
           st.session_state.save_success = True
           st.rerun()
 
