@@ -7,7 +7,7 @@ import streamlit as st
 
 # --- ตั้งค่าหน้าเว็บ ---
 st.set_page_config(
-    page_title="ระบบยืม-คืน กายอุปกรณ์ รพ.สต.บ้านบุ่ง",
+    page_title="ระบบยืม-คืน กายอุปกรณ์ (Google Sheets)",
     page_icon="🏥",
     layout="wide",
 )
@@ -85,6 +85,9 @@ st.markdown(
         .card-title { font-size: 18px; font-weight: 600; margin-bottom: 5px; }
         .card-value { font-size: 24px; font-weight: 700; }
         .card-sub { font-size: 14px; opacity: 0.95; }
+        /* แก้ไขปัญหาปุ่มอัปโหลดตัวหนังสือซ้อนกัน */
+        [data-testid='stFileUploader'] section { padding: 10px; }
+        [data-testid='stFileUploader'] button { width: auto; }
     </style>
 """,
     unsafe_allow_html=True,
@@ -109,7 +112,7 @@ df_borrowings = get_data("borrowings")
 
 # --- เมนูที่ 1: แดชบอร์ดภาพรวม ---
 if choice == "📊 แดชบอร์ดภาพรวม":
-  st.title("📊 ภาพรวมกายอุปกรณ์จำแนกตามชนิด")
+  st.title("📊 แดชบอร์ดสรุปสถานะคลังกายอุปกรณ์ตามชนิด")
   st.write("")
 
   categories = [
@@ -119,7 +122,7 @@ if choice == "📊 แดชบอร์ดภาพรวม":
       ("อื่นๆ", "card-other", "📦"),
   ]
 
-  st.subheader("📦 สรุปยอดแยกตามชนิดกายอุปกรณ์")
+  st.subheader("📦 สรุปยอดแยกตามชนิดอุปกรณ์")
   cols = st.columns(4)
 
   for i, (cat_name, css_class, icon_emoji) in enumerate(categories):
@@ -171,13 +174,11 @@ if choice == "📊 แดชบอร์ดภาพรวม":
           )
           if img_data:
             try:
-              # ตรวจสอบว่าเป็น Base64 หรือลิงก์เว็บปกติ
               if str(img_data).startswith("data:image"):
                 st.image(img_data, width=120)
               elif str(img_data).startswith("http"):
                 st.image(img_data, width=120)
               else:
-                # ถอดรหัส Base64 กรณีเก็บเป็นสตริงไบต์
                 image_bytes = b64decode(img_data)
                 st.image(image_bytes, width=120)
             except Exception:
@@ -217,19 +218,15 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
     category = st.selectbox(
         "หมวดหมู่", ["รถเข็น (Wheelchair)", "ไม้เท้า/ไม้ค้ำ", "เตียงผู้ป่วย", "อื่นๆ"]
     )
-
-    # เพิ่มปุ่มอัปโหลดรูปภาพจากเครื่องหรือมือถือ
     uploaded_file = st.file_uploader(
         "อัปโหลดรูปภาพอุปกรณ์ (จากมือถือหรือคอมพิวเตอร์)",
         type=["png", "jpg", "jpeg"],
     )
-
     submit = st.form_submit_button("💾 บันทึกข้อมูล")
 
     if submit and eq_name:
       image_string = ""
       if uploaded_file is not None:
-        # แปลงไฟล์รูปภาพเป็น Base64 เพื่อเก็บลง Google Sheets
         bytes_data = uploaded_file.getvalue()
         image_string = b64encode(bytes_data).decode("utf-8")
 
