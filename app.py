@@ -73,22 +73,20 @@ def update_row_status(worksheet_name, row_id, new_status, return_date=""):
       ws.update_cell(row_num, 7, new_status)
 
 
-# --- ฟังก์ชันย่อขนาดรูปภาพ (ปรับสัดส่วนสำหรับรูปแนวตั้ง) ---
+# --- ฟังก์ชันบีบอัดรูปภาพขนาดเล็กพิเศษ (ป้องกัน Google Sheets Error) ---
 def compress_image(image_file):
   try:
     img = Image.open(image_file)
     if img.mode in ("RGBA", "P"):
       img = img.convert("RGB")
 
-    # กำหนดความสูงเป็นหลักเพื่อให้รูปแนวตั้งเด่นชัด (รักษาอัตราส่วนเดิม)
-    max_height = 400
-    if img.height > max_height:
-      ratio = max_height / float(img.height)
-      new_width = int(float(img.width) * ratio)
-      img = img.resize((new_width, max_height), Image.Resampling.LANCZOS)
+    # ลดขนาดสูงสุดเหลือ 180 พิกเซล เพื่อให้ Base64 สั้นพอดีช่อง Google Sheets
+    max_size = 180
+    img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
 
     buffered = BytesIO()
-    img.save(buffered, format="JPEG", quality=80)
+    # ลดคุณภาพลงเหลือ 50% เพื่อขนาดไฟล์ที่ปลอดภัยที่สุด
+    img.save(buffered, format="JPEG", quality=50)
     return b64encode(buffered.getvalue()).decode("utf-8")
   except Exception:
     return ""
@@ -114,11 +112,10 @@ st.markdown(
         .card-value { font-size: 24px; font-weight: 700; }
         .card-sub { font-size: 14px; opacity: 0.95; }
         
-        /* บังคับให้รูปภาพแสดงผลในแนวตั้งแบบเต็มสัดส่วน ไม่ถูกตัดขอบ */
         .equipment-img img {
             border-radius: 8px;
             object-fit: contain;
-            max-height: 180px;
+            max-height: 150px;
             width: auto;
             box-shadow: 0 2px 5px rgba(0,0,0,0.15);
             background-color: #f8f9fa;
@@ -212,12 +209,12 @@ if choice == "📊 แดชบอร์ดภาพรวม":
           if img_data:
             try:
               if str(img_data).startswith("data:image"):
-                st.image(img_data, width=110)
+                st.image(img_data, width=100)
               elif str(img_data).startswith("http"):
-                st.image(img_data, width=110)
+                st.image(img_data, width=100)
               else:
                 image_bytes = b64decode(img_data)
-                st.image(image_bytes, width=110)
+                st.image(image_bytes, width=100)
             except Exception:
               st.markdown("🖼️ *แสดงรูปไม่ได้*")
           else:
@@ -278,7 +275,7 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
         if not eq_name.strip():
           st.warning("⚠️ กรุณากรอกชื่ออุปกรณ์ก่อนบันทึก")
         else:
-          with st.spinner("กำลังบันทึกข้อมูลและปรับแต่งรูปภาพแนวตั้ง..."):
+          with st.spinner("กำลังบันทึกข้อมูลและปรับขนาดรูปภาพ..."):
             image_string = ""
             if uploaded_file is not None:
               image_string = compress_image(uploaded_file)
