@@ -23,10 +23,6 @@ def connect_gsheets():
   try:
     if "gcp_service_account" in st.secrets:
       creds_dict = dict(st.secrets["gcp_service_account"])
-      if "private_key" in creds_dict:
-        creds_dict["private_key"] = creds_dict["private_key"].replace(
-            "\\n", "\n"
-        )
       creds = ServiceAccountCredentials.from_json_keyfile_dict(
           creds_dict, scope
       )
