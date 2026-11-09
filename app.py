@@ -148,7 +148,7 @@ df_borrowings = get_data("borrowings")
 
 # --- เมนูที่ 1: แดชบอร์ดภาพรวม ---
 if choice == "📊 แดชบอร์ดภาพรวม":
-  st.title("📊 กายอุปกรณ์จำแนกตามชนิด")
+  st.title("📊 ระบบยืม-คืนกายอุปกรณ์จำแนกตามชนิด")
   st.write("")
 
   categories = [
