@@ -6,12 +6,12 @@ import streamlit as st
 
 # --- ตั้งค่าหน้าเว็บ ---
 st.set_page_config(
-    page_title="ระบบยืม-คืน กายอุปกรณ์ (Google Sheets)",
+    page_title="ระบบยืม-คืน กายอุปกรณ์ รพ.สต.บ้านบุ่ง",
     page_icon="🏥",
     layout="wide",
 )
 
-# --- 1. ตั้งค่าการเชื่อมต่อ Google Sheets API (รองรับทั้งออนไลน์และในเครื่อง) ---
+# --- 1. ตั้งค่าการเชื่อมต่อ Google Sheets API ---
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
@@ -94,7 +94,7 @@ st.sidebar.title("📌 เมนูระบบ")
 choice = st.sidebar.radio(
     "เลือกการทำงาน",
     [
-        "📊 แดชบอร์ดภาพรวม",
+        "📊 ภาพรวมกายอุปกรณ์",
         "📋 รายการอุปกรณ์ทั้งหมด",
         "➕ เพิ่มอุปกรณ์ใหม่",
         "📝 ทำรายการยืม",
@@ -107,18 +107,18 @@ df_equipments = get_data("equipments")
 df_borrowings = get_data("borrowings")
 
 # --- เมนูที่ 1: แดชบอร์ดภาพรวม ---
-if choice == "📊 แดชบอร์ดภาพรวม":
+if choice == "📊 ภาพรวมกายอุปกรณ์":
   st.title("📊 ระบบยืม-คืนกายอุปกรณ์จำแนกตามชนิด")
   st.write("")
 
   categories = [
       ("รถเข็น(Wheelchair)", "card-wheelchair", "🦽"),
-      ("ไม้เท้า/ไม้ค้ำยัน", "card-crutches", "🦯"),
+      ("ไม้เท้า(Walker)/ไม้ค้ำยัน", "card-crutches", "🦯"),
       ("เตียงผู้ป่วย", "card-bed", "🛏️"),
       ("อื่นๆ", "card-other", "📦"),
   ]
 
-  st.subheader("📦 สรุปยอดกายอุปกรณ์จำแนกตามชนิดอุปกรณ์")
+  st.subheader("📦 สรุปยอดจำแนกตามชนิดกายอุปกรณ์")
   cols = st.columns(4)
 
   for i, (cat_name, css_class, icon_emoji) in enumerate(categories):
@@ -155,13 +155,31 @@ if choice == "📊 แดชบอร์ดภาพรวม":
 
   st.divider()
 
-  st.subheader("📋 ตารางแสดงรายการกายอุปกรณ์ทั้งหมดในคลัง")
+  st.subheader("📋 รายการอุปกรณ์ทั้งหมดในคลัง พร้อมรูปภาพ")
   if df_equipments.empty:
-    st.info("💡 ยังไม่มีข้อมูลกายอุปกรณ์ในระบบ กรุณาเพิ่มอุปกรณ์ใหม่")
+    st.info("💡 ยังไม่มีข้อมูลอุปกรณ์ในระบบ กรุณาเพิ่มอุปกรณ์ใหม่")
   else:
-    st.dataframe(df_equipments, use_container_width=True)
+    for index, row in df_equipments.iterrows():
+      with st.container():
+        col_img, col_info = st.columns([1, 4])
+        with col_img:
+          img_url = (
+              row.get("image_url", "")
+              if "image_url" in df_equipments.columns
+              else ""
+          )
+          if img_url and str(img_url).startswith("http"):
+            st.image(img_url, width=120)
+          else:
+            st.markdown("🖼️ *ไม่มีรูปภาพ*")
+        with col_info:
+          st.markdown(f"### ID: {row['id']} - {row['name']}")
+          st.write(
+              f"**หมวดหมู่:** {row['category']} | **สถานะ:** {row['status']}"
+          )
+        st.divider()
 
-  st.subheader("📌 รายการกายอุปกรณ์ที่กำลังถูกยืมขณะนี้")
+  st.subheader("📌 รายการอุปกรณ์ที่กำลังถูกยืมขณะนี้")
   if not df_borrowings.empty and "status" in df_borrowings.columns:
     current_borrowed = df_borrowings[df_borrowings["status"] == "กำลังยืม"]
     if current_borrowed.empty:
@@ -172,12 +190,12 @@ if choice == "📊 แดชบอร์ดภาพรวม":
     st.info("🎉 ไม่มีอุปกรณ์ค้างยืมในขณะนี้")
 
 # --- เมนูที่ 2: รายการอุปกรณ์ทั้งหมด ---
-elif choice == "📋 รายการกายอุปกรณ์ทั้งหมด":
+elif choice == "📋 รายการอุปกรณ์ทั้งหมด":
   st.subheader("📋 รายการกายอุปกรณ์ทั้งหมดในระบบ")
   if not df_equipments.empty:
     st.dataframe(df_equipments, use_container_width=True)
   else:
-    st.info("ยังไม่มีข้อมูลกายอุปกรณ์")
+    st.info("ยังไม่มีข้อมูลอุปกรณ์")
 
 # --- เมนูที่ 3: เพิ่มอุปกรณ์ใหม่ ---
 elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
@@ -187,6 +205,9 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
     category = st.selectbox(
         "หมวดหมู่", ["รถเข็น (Wheelchair)", "ไม้เท้า/ไม้ค้ำ", "เตียงผู้ป่วย", "อื่นๆ"]
     )
+    image_url = st.text_input(
+        "ลิงก์รูปภาพอุปกรณ์ (Image URL เช่น จาก ImgBB หรือเว็บฝากรูป)"
+    )
     submit = st.form_submit_button("💾 บันทึกข้อมูล")
 
     if submit and eq_name:
@@ -195,7 +216,7 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
           if df_equipments.empty
           else int(df_equipments["id"].max()) + 1
       )
-      add_row("equipments", [new_id, eq_name, category, "พร้อมใช้งาน"])
+      add_row("equipments", [new_id, eq_name, category, "พร้อมใช้งาน", image_url])
       st.success(f"เพิ่มอุปกรณ์ '{eq_name}' เรียบร้อยแล้ว!")
       st.rerun()
 
@@ -212,7 +233,9 @@ elif choice == "📝 ทำรายการยืม":
     else:
       with st.form("borrow_form"):
         available_eq["display_name"] = (
-            available_eq["name"].astype(str)
+            available_eq["id"].astype(str)
+            + " - "
+            + available_eq["name"].astype(str)
             + " ("
             + available_eq["category"].astype(str)
             + ")"
