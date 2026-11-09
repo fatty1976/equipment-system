@@ -22,12 +22,12 @@ def init_connection():
     client = gspread.authorize(creds)
     return client
 
-# เชื่อมต่อ Google Sheets และเลือกแท็บ borrowings
+# เชื่อมต่อ Google Sheets และเลือกแท็บต่างๆ
 try:
     client = init_connection()
-    # ** หมายเหตุ: เปลี่ยนชื่อ 'equipment_db' ให้ตรงกับชื่อไฟล์ Google Sheets ของคุณจริง **
     spreadsheet = client.open("equipment_db")
     sheet_borrowings = spreadsheet.worksheet("borrowings") 
+    sheet_equipments = spreadsheet.worksheet("equipments") 
 except Exception as e:
     st.error(f"ไม่สามารถเชื่อมต่อกับ Google Sheets ได้: {e}")
 
@@ -39,38 +39,55 @@ menu = st.radio("เลือกการใช้งาน", ["บันทึ�
 st.divider()
 
 if menu == "บันทึกการยืมอุปกรณ์":
-    st.subheader("📝 ฟอร์มบันทึกข้อมูลการยืม")
+    st.subheader("📝 บันทึกการยืมกายอุปกรณ์")
     
+    # ดึงข้อมูลอุปกรณ์จากแท็บ equipments มาทำตัวเลือก
+    try:
+        eq_data = sheet_equipments.get_all_records()
+        if eq_data:
+            df_eq = pd.DataFrame(eq_data)
+            # สมมติให้คอลัมน์แรกหรือคอลัมน์ชื่อ eq_id / name เป็นตัวเลือก
+            eq_options = [f"{row.get('eq_id', '')} - {row.get('name', '')}" for index, row in df_eq.iterrows()]
+        else:
+            eq_options = ["ไม่พบรายการอุปกรณ์ในระบบ"]
+    except Exception:
+        eq_options = ["โหลดข้อมูลอุปกรณ์ไม่สำเร็จ"]
+
     with st.form("loan_form", clear_on_submit=True):
-        st.info("กรุณากรอกข้อมูลให้ครบถ้วนเพื่อบันทึกการยืม")
         
-        eq_id = st.text_input("รหัสอุปกรณ์ (eq_id)")
-        borrower_name = st.text_input("ชื่อ-นามสกุล ผู้ยืม (borrower_name)")
-        phone = st.text_input("เบอร์โทรศัพท์ (phone)")
-        address = st.text_area("ที่อยู่ (address)")
+        selected_eq = st.selectbox("เลือกกายอุปกรณ์ที่ต้องการยืม", eq_options)
+        borrower_name = st.text_input("ชื่อ-นามสกุล ผู้ยืม")
+        phone = st.text_input("เบอร์โทรศัพท์ติดต่อ")
         
-        submitted = st.form_submit_button("ยืนยันการยืมอุปกรณ์")
+        # เพิ่มช่องกรอกที่อยู่ตรงนี้ครับ
+        address = st.text_area("ที่อยู่สำหรับการติดต่อ (address)")
+        
+        borrow_date = st.date_input("วันที่ยืม", value=datetime.now())
+        
+        submitted = st.form_submit_button("ยืนยันการยืม")
         
         if submitted:
-            if borrower_name.strip() == "" or eq_id.strip() == "":
-                st.warning("⚠️ กรุณากรอก 'รหัสอุปกรณ์' และ 'ชื่อผู้ยืม' ให้ครบถ้วนครับ")
+            if borrower_name.strip() == "" or address.strip() == "":
+                st.warning("⚠️ กรุณากรอก 'ชื่อ-นามสกุล' และ 'ที่อยู่' ให้ครบถ้วนครับ")
             else:
                 try:
-                    # สร้าง id อัตโนมัติจากตัวเลขเวลาปัจจุบัน
+                    # ดึงรหัสอุปกรณ์จากข้อความที่เลือก (เช่น "EQ001 - เตียงผู้ป่วย" จะดึงคำว่า EQ001 ออกมา)
+                    eq_id = selected_eq.split(" - ")[0] if " - " in selected_eq else selected_eq
+                    
                     new_id = int(datetime.now().timestamp())
-                    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    formatted_borrow_date = borrow_date.strftime("%Y-%m-%d")
                     
                     # เรียงข้อมูลให้ตรงกับคอลัมน์ในชีต borrowings: 
                     # A:id, B:eq_id, C:borrower_name, D:phone, E:borrow_date, F:return_date, G:status, H:address
                     row_data = [
-                        new_id,             # A: id
-                        eq_id,              # B: eq_id
-                        borrower_name,      # C: borrower_name
-                        phone,              # D: phone
-                        current_date,       # E: borrow_date
-                        "",                 # F: return_date (ยังไม่คืน ปล่อยว่างไว้)
-                        "กำลังยืม",          # G: status
-                        address             # H: address
+                        new_id,                 # A: id
+                        eq_id,                  # B: eq_id
+                        borrower_name,          # C: borrower_name
+                        phone,                  # D: phone
+                        formatted_borrow_date,  # E: borrow_date
+                        "",                     # F: return_date (ว่างไว้ก่อน)
+                        "กำลังยืม",              # G: status
+                        address                 # H: address (ที่อยู่)
                     ]
                     
                     # บันทึกข้อมูลลง Google Sheets
