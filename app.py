@@ -23,6 +23,10 @@ def connect_gsheets():
   try:
     if "gcp_service_account" in st.secrets:
       creds_dict = dict(st.secrets["gcp_service_account"])
+      if "private_key" in creds_dict:
+        creds_dict["private_key"] = creds_dict["private_key"].replace(
+            "\\n", "\n"
+        )
       creds = ServiceAccountCredentials.from_json_keyfile_dict(
           creds_dict, scope
       )
@@ -35,10 +39,7 @@ def connect_gsheets():
     sheet = client.open("equipment_db")
     return sheet
   except Exception as e:
-    st.error(
-        f"ไม่สามารถเชื่อมต่อ Google Sheets ได้ กรุณาตรวจสอบการตั้งค่า Secrets"
-        f" หรือไฟล์ credentials.json: {e}"
-    )
+    st.error(f"รายละเอียดข้อผิดพลาดในการเชื่อมต่อ: {e}")
     return None
 
 
