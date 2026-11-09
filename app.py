@@ -9,7 +9,7 @@ import streamlit as st
 
 # --- ตั้งค่าหน้าเว็บ ---
 st.set_page_config(
-    page_title="ระบบยืม-คืน กายอุปกรณ์ (Google Sheets)",
+    page_title="ระบบยืม-คืน กายอุปกรณ์ รพ.สต.",
     page_icon="🏥",
     layout="wide",
 )
@@ -134,7 +134,7 @@ st.sidebar.title("📌 เมนูระบบ")
 choice = st.sidebar.radio(
     "เลือกการทำงาน",
     [
-        "📊 แดชบอร์ดภาพรวม",
+        "📊 ภาพรวมกายอุปกรณ์",
         "📋 รายการอุปกรณ์ทั้งหมด",
         "➕ เพิ่มอุปกรณ์ใหม่",
         "📝 ทำรายการยืม",
@@ -147,7 +147,7 @@ df_equipments = get_data("equipments")
 df_borrowings = get_data("borrowings")
 
 # --- เมนูที่ 1: แดชบอร์ดภาพรวม ---
-if choice == "📊 แดชบอร์ดภาพรวม":
+if choice == "📊 ภาพรวมกายอุปกรณ์":
   st.title("📊 ระบบยืม-คืนกายอุปกรณ์จำแนกตามชนิด")
   st.write("")
 
@@ -257,7 +257,7 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
     st.session_state.save_success = False
 
   if st.session_state.save_success:
-    st.success("🎉 บันทึกข้อมูลอุปกรณ์เรียบร้อยแล้ว! พร้อมสำหรับเพิ่มชิ้นถัดไป")
+    st.success("🎉 บันทึกข้อมูลกายอุปกรณ์เรียบร้อยแล้ว! พร้อมสำหรับเพิ่มชิ้นถัดไป")
     if st.button("➕ เพิ่มอุปกรณ์ชิ้นใหม่"):
       st.session_state.save_success = False
       st.rerun()
@@ -351,7 +351,7 @@ elif choice == "📝 ทำรายการยืม":
           )
           update_row_status("equipments", eq_id, "กำลังถูกยืม")
 
-          st.success(f"บันทึกการยืมอุปกรณ์สำเร็จสำหรับคุณ {borrower_name}")
+          st.success(f"บันทึกการยืมกายอุปกรณ์สำเร็จสำหรับคุณ {borrower_name}")
           st.rerun()
 
 # --- เมนูที่ 5: คืนอุปกรณ์ ---
