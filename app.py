@@ -2,7 +2,7 @@ from base64 import b64decode, b64encode
 from datetime import date
 from io import BytesIO
 import pandas as pd
-from PIL import Image
+from PIL import Image, ImageOps
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import streamlit as st
@@ -73,20 +73,23 @@ def update_row_status(worksheet_name, row_id, new_status, return_date=""):
       ws.update_cell(row_num, 7, new_status)
 
 
-# --- ฟังก์ชันบีบอัดรูปภาพขนาดเล็กพิเศษ (ป้องกัน Google Sheets Error) ---
+# --- ฟังก์ชันปรับปรุงและหมุนรูปแนวตั้งอัตโนมัติ ---
 def compress_image(image_file):
   try:
     img = Image.open(image_file)
+
+    # หมุนภาพตามข้อมูล EXIF อัตโนมัติ (แก้ปัญหารูปถ่ายจากมือถือแล้วนอนตะแคง)
+    img = ImageOps.exif_transpose(img)
+
     if img.mode in ("RGBA", "P"):
       img = img.convert("RGB")
 
-    # ลดขนาดสูงสุดเหลือ 180 พิกเซล เพื่อให้ Base64 สั้นพอดีช่อง Google Sheets
-    max_size = 180
+    # กำหนดขนาดจำกัดเพื่อให้ขนาด Base64 ไม่เกินโควต้า Google Sheets
+    max_size = 200
     img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
 
     buffered = BytesIO()
-    # ลดคุณภาพลงเหลือ 50% เพื่อขนาดไฟล์ที่ปลอดภัยที่สุด
-    img.save(buffered, format="JPEG", quality=50)
+    img.save(buffered, format="JPEG", quality=55)
     return b64encode(buffered.getvalue()).decode("utf-8")
   except Exception:
     return ""
@@ -266,7 +269,7 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
           ["รถเข็น (Wheelchair)", "ไม้เท้า/ไม้ค้ำ", "เตียงผู้ป่วย", "อื่นๆ"],
       )
       uploaded_file = st.file_uploader(
-          "อัปโหลดรูปภาพอุปกรณ์ (รองรับภาพถ่ายแนวตั้งจากมือถือ)",
+          "อัปโหลดรูปภาพอุปกรณ์ (หมุนภาพแนวตั้งอัตโนมัติ)",
           type=["png", "jpg", "jpeg"],
       )
       submit = st.form_submit_button("💾 บันทึกข้อมูล")
@@ -275,7 +278,7 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
         if not eq_name.strip():
           st.warning("⚠️ กรุณากรอกชื่ออุปกรณ์ก่อนบันทึก")
         else:
-          with st.spinner("กำลังบันทึกข้อมูลและปรับขนาดรูปภาพ..."):
+          with st.spinner("กำลังบันทึกข้อมูลและปรับหมุนภาพแนวตั้ง..."):
             image_string = ""
             if uploaded_file is not None:
               image_string = compress_image(uploaded_file)
