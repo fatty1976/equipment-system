@@ -77,14 +77,11 @@ def update_row_status(worksheet_name, row_id, new_status, return_date=""):
 def compress_image(image_file):
   try:
     img = Image.open(image_file)
-
-    # หมุนภาพตามข้อมูล EXIF อัตโนมัติ (แก้ปัญหารูปถ่ายจากมือถือแล้วนอนตะแคง)
     img = ImageOps.exif_transpose(img)
 
     if img.mode in ("RGBA", "P"):
       img = img.convert("RGB")
 
-    # กำหนดขนาดจำกัดเพื่อให้ขนาด Base64 ไม่เกินโควต้า Google Sheets
     max_size = 200
     img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
 
@@ -124,6 +121,23 @@ st.markdown(
             background-color: #f8f9fa;
             padding: 3px;
         }
+        
+        .main-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .main-header img {
+            height: 55px;
+            width: auto;
+        }
+        .main-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            color: #1f2937;
+        }
     </style>
 """,
     unsafe_allow_html=True,
@@ -146,9 +160,20 @@ choice = st.sidebar.radio(
 df_equipments = get_data("equipments")
 df_borrowings = get_data("borrowings")
 
+# --- โลโก้กระทรวงสาธารณสุข (URL ทางการสำหรับแสดงผล) ---
+moph_logo_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Seal_of_the_Ministry_of_Public_Health_of_Thailand.svg/500px-Seal_of_the_Ministry_of_Public_Health_of_Thailand.svg.png"
+
 # --- เมนูที่ 1: แดชบอร์ดภาพรวม ---
 if choice == "📊 ภาพรวมกายอุปกรณ์":
-  st.title("📊 ระบบยืม-คืนกายอุปกรณ์จำแนกตามชนิด")
+  st.markdown(
+      f"""
+        <div class="main-header">
+            <img src="{moph_logo_url}" alt="MOPH Logo">
+            <h1>ระบบยืม-คืนกายอุปกรณ์จำแนกตามชนิด</h1>
+        </div>
+        """,
+      unsafe_allow_html=True,
+  )
   st.write("")
 
   categories = [
@@ -325,7 +350,7 @@ elif choice == "📝 ทำรายการยืม":
         )
         borrower_name = st.text_input("ชื่อ-นามสกุล ผู้ยืม")
         phone = st.text_input("เบอร์โทรศัพท์ติดต่อ")
-        address = st.text_area("ที่อยู่ (address)")  # เพิ่มช่องกรอกที่อยู่
+        address = st.text_area("ที่อยู่ (address)")
         borrow_date = st.date_input("วันที่ยืม", date.today())
 
         submit_borrow = st.form_submit_button("✅ ยืนยันการยืม")
@@ -341,8 +366,6 @@ elif choice == "📝 ทำรายการยืม":
                 else int(df_borrowings["id"].max()) + 1
             )
 
-            # เรียงลำดับข้อมูลให้ตรงกับคอลัมน์ใน Google Sheets (borrowings):
-            # A: id, B: eq_id, C: borrower_name, D: phone, E: borrow_date, F: return_date, G: status, H: address
             add_row(
                 "borrowings",
                 [
