@@ -112,13 +112,13 @@ if choice == "📊 แดชบอร์ดภาพรวม":
   st.write("")
 
   categories = [
-      ("รถเข็น (Wheelchair)", "card-wheelchair", "🦽"),
-      ("ไม้เท้า/ไม้ค้ำ", "card-crutches", "🦯"),
+      ("รถเข็น(Wheelchair)", "card-wheelchair", "🦽"),
+      ("ไม้เท้า/ไม้ค้ำยัน", "card-crutches", "🦯"),
       ("เตียงผู้ป่วย", "card-bed", "🛏️"),
       ("อื่นๆ", "card-other", "📦"),
   ]
 
-  st.subheader("📦 สรุปยอดแยกตามชนิดอุปกรณ์")
+  st.subheader("📦 สรุปยอดกายอุปกรณ์จำแนกตามชนิดอุปกรณ์")
   cols = st.columns(4)
 
   for i, (cat_name, css_class, icon_emoji) in enumerate(categories):
@@ -155,13 +155,13 @@ if choice == "📊 แดชบอร์ดภาพรวม":
 
   st.divider()
 
-  st.subheader("📋 ตารางแสดงรายการอุปกรณ์ทั้งหมดในคลัง")
+  st.subheader("📋 ตารางแสดงรายการกายอุปกรณ์ทั้งหมดในคลัง")
   if df_equipments.empty:
-    st.info("💡 ยังไม่มีข้อมูลอุปกรณ์ในระบบ กรุณาเพิ่มอุปกรณ์ใหม่")
+    st.info("💡 ยังไม่มีข้อมูลกายอุปกรณ์ในระบบ กรุณาเพิ่มอุปกรณ์ใหม่")
   else:
     st.dataframe(df_equipments, use_container_width=True)
 
-  st.subheader("📌 รายการอุปกรณ์ที่กำลังถูกยืมขณะนี้")
+  st.subheader("📌 รายการกายอุปกรณ์ที่กำลังถูกยืมขณะนี้")
   if not df_borrowings.empty and "status" in df_borrowings.columns:
     current_borrowed = df_borrowings[df_borrowings["status"] == "กำลังยืม"]
     if current_borrowed.empty:
@@ -172,12 +172,12 @@ if choice == "📊 แดชบอร์ดภาพรวม":
     st.info("🎉 ไม่มีอุปกรณ์ค้างยืมในขณะนี้")
 
 # --- เมนูที่ 2: รายการอุปกรณ์ทั้งหมด ---
-elif choice == "📋 รายการอุปกรณ์ทั้งหมด":
+elif choice == "📋 รายการกายอุปกรณ์ทั้งหมด":
   st.subheader("📋 รายการกายอุปกรณ์ทั้งหมดในระบบ")
   if not df_equipments.empty:
     st.dataframe(df_equipments, use_container_width=True)
   else:
-    st.info("ยังไม่มีข้อมูลอุปกรณ์")
+    st.info("ยังไม่มีข้อมูลกายอุปกรณ์")
 
 # --- เมนูที่ 3: เพิ่มอุปกรณ์ใหม่ ---
 elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
