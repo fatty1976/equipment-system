@@ -1,386 +1,98 @@
-from base64 import b64decode, b64encode
-from datetime import date
-from io import BytesIO
+import streamlit as st
 import pandas as pd
-from PIL import Image, ImageOps
+from datetime import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import streamlit as st
 
-# --- ตั้งค่าหน้าเว็บ ---
-st.set_page_config(
-    page_title="ระบบยืม-คืน กายอุปกรณ์ รพ.สต.",
-    page_icon="🏥",
-    layout="wide",
-)
+# --- ตั้งค่าหน้าจอ ---
+st.set_page_config(page_title="ระบบยืม-คืนอุปกรณ์", page_icon="📦", layout="centered")
 
-# --- 1. ตั้งค่าการเชื่อมต่อ Google Sheets API ---
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive",
-]
-
-
-@st.cache_resource
-def connect_gsheets():
-  try:
+# --- ฟังก์ชันเชื่อมต่อ Google Sheets ---
+def init_connection():
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
     if "gcp_service_account" in st.secrets:
-      creds_dict = dict(st.secrets["gcp_service_account"])
-      creds = ServiceAccountCredentials.from_json_keyfile_dict(
-          creds_dict, scope
-      )
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     else:
-      creds = ServiceAccountCredentials.from_json_keyfile_name(
-          "credentials.json", scope
-      )
-
+        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+        
     client = gspread.authorize(creds)
-    sheet = client.open("equipment_db")
-    return sheet
-  except Exception as e:
-    st.error(f"รายละเอียดข้อผิดพลาดในการเชื่อมต่อ: {e}")
-    return None
+    return client
 
+# เชื่อมต่อ Google Sheets และเลือกแท็บ borrowings
+try:
+    client = init_connection()
+    # ** หมายเหตุ: เปลี่ยนชื่อ 'equipment_db' ให้ตรงกับชื่อไฟล์ Google Sheets ของคุณจริง **
+    spreadsheet = client.open("equipment_db")
+    sheet_borrowings = spreadsheet.worksheet("borrowings") 
+except Exception as e:
+    st.error(f"ไม่สามารถเชื่อมต่อกับ Google Sheets ได้: {e}")
 
-sheet = connect_gsheets()
+# --- ส่วนติดต่อผู้ใช้งาน (UI) ---
+st.title("📦 ระบบยืม-คืนอุปกรณ์")
 
+# เมนูย่อยสำหรับเลือกการใช้งาน
+menu = st.radio("เลือกการใช้งาน", ["บันทึกการยืมอุปกรณ์", "ดูประวัติและรายการยืมทั้งหมด"], horizontal=True)
+st.divider()
 
-# --- ฟังก์ชันดึงข้อมูลแปลงเป็น DataFrame ---
-def get_data(worksheet_name):
-  if sheet is None:
-    return pd.DataFrame()
-  ws = sheet.worksheet(worksheet_name)
-  data = ws.get_all_records()
-  return pd.DataFrame(data)
-
-
-# --- ฟังก์ชันเพิ่มข้อมูลลง Google Sheets ---
-def add_row(worksheet_name, row_data):
-  ws = sheet.worksheet(worksheet_name)
-  ws.append_row(row_data)
-
-
-# --- ฟังก์ชันอัปเดตสถานะ ---
-def update_row_status(worksheet_name, row_id, new_status, return_date=""):
-  ws = sheet.worksheet(worksheet_name)
-  cell = ws.find(str(row_id))
-  if cell:
-    row_num = cell.row
-    if worksheet_name == "equipments":
-      ws.update_cell(row_num, 4, new_status)
-    elif worksheet_name == "borrowings":
-      ws.update_cell(row_num, 6, return_date)
-      ws.update_cell(row_num, 7, new_status)
-
-
-# --- ฟังก์ชันปรับปรุงและหมุนรูปแนวตั้งอัตโนมัติ ---
-def compress_image(image_file):
-  try:
-    img = Image.open(image_file)
-
-    # หมุนภาพตามข้อมูล EXIF อัตโนมัติ (แก้ปัญหารูปถ่ายจากมือถือแล้วนอนตะแคง)
-    img = ImageOps.exif_transpose(img)
-
-    if img.mode in ("RGBA", "P"):
-      img = img.convert("RGB")
-
-    # กำหนดขนาดจำกัดเพื่อให้ขนาด Base64 ไม่เกินโควต้า Google Sheets
-    max_size = 200
-    img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-
-    buffered = BytesIO()
-    img.save(buffered, format="JPEG", quality=55)
-    return b64encode(buffered.getvalue()).decode("utf-8")
-  except Exception:
-    return ""
-
-
-# --- 2. ตั้งค่า CSS และฟอนต์ Saraban ---
-st.markdown(
-    """
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
-        * { font-family: 'Sarabun', sans-serif !important; }
+if menu == "บันทึกการยืมอุปกรณ์":
+    st.subheader("📝 ฟอร์มบันทึกข้อมูลการยืม")
+    
+    with st.form("loan_form", clear_on_submit=True):
+        st.info("กรุณากรอกข้อมูลให้ครบถ้วนเพื่อบันทึกการยืม")
         
-        [data-testid='stFileUploader'] * {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-        }
-
-        .card-box { padding: 20px; border-radius: 8px; color: white; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .card-wheelchair { background: linear-gradient(135deg, #1e7e34, #28a745); }
-        .card-crutches { background: linear-gradient(135deg, #d39e00, #ffc107); color: #333 !important; }
-        .card-bed { background: linear-gradient(135deg, #117a8b, #17a2b8); }
-        .card-other { background: linear-gradient(135deg, #5a6268, #6c757d); }
-        .card-title { font-size: 18px; font-weight: 600; margin-bottom: 5px; }
-        .card-value { font-size: 24px; font-weight: 700; }
-        .card-sub { font-size: 14px; opacity: 0.95; }
+        eq_id = st.text_input("รหัสอุปกรณ์ (eq_id)")
+        borrower_name = st.text_input("ชื่อ-นามสกุล ผู้ยืม (borrower_name)")
+        phone = st.text_input("เบอร์โทรศัพท์ (phone)")
+        address = st.text_area("ที่อยู่ (address)")
         
-        .equipment-img img {
-            border-radius: 8px;
-            object-fit: contain;
-            max-height: 150px;
-            width: auto;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-            background-color: #f8f9fa;
-            padding: 3px;
-        }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
+        submitted = st.form_submit_button("ยืนยันการยืมอุปกรณ์")
+        
+        if submitted:
+            if borrower_name.strip() == "" or eq_id.strip() == "":
+                st.warning("⚠️ กรุณากรอก 'รหัสอุปกรณ์' และ 'ชื่อผู้ยืม' ให้ครบถ้วนครับ")
+            else:
+                try:
+                    # สร้าง id อัตโนมัติจากตัวเลขเวลาปัจจุบัน
+                    new_id = int(datetime.now().timestamp())
+                    current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    
+                    # เรียงข้อมูลให้ตรงกับคอลัมน์ในชีต borrowings: 
+                    # A:id, B:eq_id, C:borrower_name, D:phone, E:borrow_date, F:return_date, G:status, H:address
+                    row_data = [
+                        new_id,             # A: id
+                        eq_id,              # B: eq_id
+                        borrower_name,      # C: borrower_name
+                        phone,              # D: phone
+                        current_date,       # E: borrow_date
+                        "",                 # F: return_date (ยังไม่คืน ปล่อยว่างไว้)
+                        "กำลังยืม",          # G: status
+                        address             # H: address
+                    ]
+                    
+                    # บันทึกข้อมูลลง Google Sheets
+                    sheet_borrowings.append_row(row_data)
+                    
+                    st.success("✅ บันทึกข้อมูลการยืมและที่อยู่สำเร็จเรียบร้อยครับ!")
+                    
+                except Exception as e:
+                    st.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: {e}")
 
-# --- เมนูด้านข้าง (Sidebar) ---
-st.sidebar.title("📌 เมนูระบบ")
-choice = st.sidebar.radio(
-    "เลือกการทำงาน",
-    [
-        "📊 ภาพรวมกายอุปกรณ์",
-        "📋 รายการอุปกรณ์ทั้งหมด",
-        "➕ เพิ่มอุปกรณ์ใหม่",
-        "📝 ทำรายการยืม",
-        "🔄 คืนอุปกรณ์",
-    ],
-)
-
-# โหลดข้อมูลปัจจุบันจาก Google Sheets
-df_equipments = get_data("equipments")
-df_borrowings = get_data("borrowings")
-
-# --- เมนูที่ 1: แดชบอร์ดภาพรวม ---
-if choice == "📊 ภาพรวมกายอุปกรณ์":
-  st.title("📊 ระบบยืม-คืนกายอุปกรณ์จำแนกตามชนิด")
-  st.write("")
-
-  categories = [
-      ("รถเข็น (Wheelchair)", "card-wheelchair", "🦽"),
-      ("ไม้เท้า/ไม้ค้ำ", "card-crutches", "🦯"),
-      ("เตียงผู้ป่วย", "card-bed", "🛏️"),
-      ("อื่นๆ", "card-other", "📦"),
-  ]
-
-  st.subheader("📦 สรุปยอดจำแนกตามชนิดกายอุปกรณ์")
-  cols = st.columns(4)
-
-  for i, (cat_name, css_class, icon_emoji) in enumerate(categories):
-    with cols[i]:
-      if not df_equipments.empty and "category" in df_equipments.columns:
-        total_cat = len(
-            df_equipments[df_equipments["category"] == cat_name]
-        )
-        avail_cat = len(
-            df_equipments[
-                (df_equipments["category"] == cat_name)
-                & (df_equipments["status"] == "พร้อมใช้งาน")
-            ]
-        )
-        borrow_cat = len(
-            df_equipments[
-                (df_equipments["category"] == cat_name)
-                & (df_equipments["status"] == "กำลังถูกยืม")
-            ]
-        )
-      else:
-        total_cat, avail_cat, borrow_cat = 0, 0, 0
-
-      st.markdown(
-          f"""
-            <div class="card-box {css_class}">
-                <div class="card-title">{icon_emoji} {cat_name}</div>
-                <div class="card-value">ทั้งหมด {total_cat} ชิ้น</div>
-                <div class="card-sub">✅ พร้อมใช้: {avail_cat} | 🔄 กำลังยืม: {borrow_cat}</div>
-            </div>
-            """,
-          unsafe_allow_html=True,
-      )
-
-  st.divider()
-
-  st.subheader("📋 รายการกายอุปกรณ์ทั้งหมดในคลัง พร้อมรูปภาพ")
-  if df_equipments.empty:
-    st.info("💡 ยังไม่มีข้อมูลอุปกรณ์ในระบบ กรุณาเพิ่มอุปกรณ์ใหม่")
-  else:
-    for index, row in df_equipments.iterrows():
-      with st.container():
-        col_img, col_info = st.columns([1, 5])
-        with col_img:
-          st.markdown('<div class="equipment-img">', unsafe_allow_html=True)
-          img_data = (
-              row.get("image_url", "")
-              if "image_url" in df_equipments.columns
-              else ""
-          )
-          if img_data:
-            try:
-              if str(img_data).startswith("data:image"):
-                st.image(img_data, width=100)
-              elif str(img_data).startswith("http"):
-                st.image(img_data, width=100)
-              else:
-                image_bytes = b64decode(img_data)
-                st.image(image_bytes, width=100)
-            except Exception:
-              st.markdown("🖼️ *แสดงรูปไม่ได้*")
-          else:
-            st.markdown("🖼️ *ไม่มีรูป*")
-          st.markdown("</div>", unsafe_allow_html=True)
-
-        with col_info:
-          st.markdown(f"### ID: {row['id']} - {row['name']}")
-          st.write(
-              f"**หมวดหมู่:** {row['category']} | **สถานะ:** {row['status']}"
-          )
-        st.divider()
-
-  st.subheader("📌 รายการกายอุปกรณ์ที่กำลังถูกยืมขณะนี้")
-  if not df_borrowings.empty and "status" in df_borrowings.columns:
-    current_borrowed = df_borrowings[df_borrowings["status"] == "กำลังยืม"]
-    if current_borrowed.empty:
-      st.info("🎉 ไม่มีอุปกรณ์ค้างยืมในขณะนี้")
-    else:
-      st.dataframe(current_borrowed, use_container_width=True)
-  else:
-    st.info("🎉 ไม่มีอุปกรณ์ค้างยืมในขณะนี้")
-
-# --- เมนูที่ 2: รายการอุปกรณ์ทั้งหมด ---
-elif choice == "📋 รายการอุปกรณ์ทั้งหมด":
-  st.subheader("📋 รายการกายอุปกรณ์ทั้งหมดในระบบ")
-  if not df_equipments.empty:
-    st.dataframe(df_equipments, use_container_width=True)
-  else:
-    st.info("ยังไม่มีข้อมูลอุปกรณ์")
-
-# --- เมนูที่ 3: เพิ่มอุปกรณ์ใหม่ ---
-elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
-  st.subheader("➕ เพิ่มกายอุปกรณ์เข้าคลัง")
-
-  if "save_success" not in st.session_state:
-    st.session_state.save_success = False
-
-  if st.session_state.save_success:
-    st.success("🎉 บันทึกข้อมูลกายอุปกรณ์เรียบร้อยแล้ว! พร้อมสำหรับเพิ่มชิ้นถัดไป")
-    if st.button("➕ เพิ่มอุปกรณ์ชิ้นใหม่"):
-      st.session_state.save_success = False
-      st.rerun()
-  else:
-    with st.form("add_eq_form"):
-      eq_name = st.text_input("ชื่ออุปกรณ์ (เช่น รถเข็นอลูมิเนียมพับได้)")
-      category = st.selectbox(
-          "หมวดหมู่",
-          ["รถเข็น (Wheelchair)", "ไม้เท้า/ไม้ค้ำ", "เตียงผู้ป่วย", "อื่นๆ"],
-      )
-      uploaded_file = st.file_uploader(
-          "อัปโหลดรูปภาพอุปกรณ์ (หมุนภาพแนวตั้งอัตโนมัติ)",
-          type=["png", "jpg", "jpeg"],
-      )
-      submit = st.form_submit_button("💾 บันทึกข้อมูล")
-
-      if submit:
-        if not eq_name.strip():
-          st.warning("⚠️ กรุณากรอกชื่ออุปกรณ์ก่อนบันทึก")
-        else:
-          with st.spinner("กำลังบันทึกข้อมูลและปรับหมุนภาพแนวตั้ง..."):
-            image_string = ""
-            if uploaded_file is not None:
-              image_string = compress_image(uploaded_file)
-
-            new_id = (
-                1
-                if df_equipments.empty
-                else int(df_equipments["id"].max()) + 1
-            )
-            add_row(
-                "equipments",
-                [new_id, eq_name, category, "พร้อมใช้งาน", image_string],
-            )
-
-          st.session_state.save_success = True
-          st.rerun()
-
-# --- เมนูที่ 4: ทำรายการยืม ---
-elif choice == "📝 ทำรายการยืม":
-  st.subheader("📝 บันทึกการยืมกายอุปกรณ์")
-
-  if df_equipments.empty:
-    st.warning("⚠️ ไม่มีข้อมูลกายอุปกรณ์ในระบบ")
-  else:
-    available_eq = df_equipments[df_equipments["status"] == "พร้อมใช้งาน"]
-    if available_eq.empty:
-      st.warning("⚠️ ไม่มีกายอุปกรณ์ที่พร้อมให้ยืมในขณะนี้")
-    else:
-      with st.form("borrow_form"):
-        available_eq["display_name"] = (
-            available_eq["id"].astype(str)
-            + " - "
-            + available_eq["name"].astype(str)
-            + " ("
-            + available_eq["category"].astype(str)
-            + ")"
-        )
-        eq_dict = dict(
-            zip(available_eq["display_name"], available_eq["id"])
-        )
-
-        selected_eq_name = st.selectbox(
-            "เลือกกายอุปกรณ์ที่ต้องการยืม", list(eq_dict.keys())
-        )
-        borrower_name = st.text_input("ชื่อ-นามสกุล ผู้ยืม")
-        phone = st.text_input("เบอร์โทรศัพท์ติดต่อ")
-        borrow_date = st.date_input("วันที่ยืม", date.today())
-
-        submit_borrow = st.form_submit_button("✅ ยืนยันการยืม")
-
-        if submit_borrow and borrower_name and phone:
-          eq_id = int(eq_dict[selected_eq_name])
-          borrow_id = (
-              1
-              if df_borrowings.empty
-              else int(df_borrowings["id"].max()) + 1
-          )
-
-          add_row(
-              "borrowings",
-              [
-                  borrow_id,
-                  eq_id,
-                  borrower_name,
-                  phone,
-                  str(borrow_date),
-                  "",
-                  "กำลังยืม",
-              ],
-          )
-          update_row_status("equipments", eq_id, "กำลังถูกยืม")
-
-          st.success(f"บันทึกการยืมกายอุปกรณ์สำเร็จสำหรับคุณ {borrower_name}")
-          st.rerun()
-
-# --- เมนูที่ 5: คืนอุปกรณ์ ---
-elif choice == "🔄 คืนกายอุปกรณ์":
-  st.subheader("🔄 บันทึกรับคืนกายอุปกรณ์")
-
-  if df_borrowings.empty or "status" not in df_borrowings.columns:
-    st.info("🎉 ไม่มีอุปกรณ์ค้างยืมในขณะนี้")
-  else:
-    borrowed_df = df_borrowings[df_borrowings["status"] == "กำลังยืม"]
-
-    if borrowed_df.empty:
-      st.info("🎉 ไม่มีอุปกรณ์ค้างยืมในขณะนี้ ทุกชิ้นอยู่ครบในคลัง")
-    else:
-      st.dataframe(borrowed_df, use_container_width=True)
-
-      borrow_id_to_return = st.selectbox(
-          "เลือก ID รายการยืมที่ต้องการบันทึกรับคืน",
-          borrowed_df["id"].tolist(),
-      )
-
-      if st.button("✅ ยืนยันการรับคืนอุปกรณ์"):
-        row = borrowed_df[borrowed_df["id"] == borrow_id_to_return].iloc[0]
-        eq_id = int(row["eq_id"])
-
-        update_row_status(
-            "borrowings", borrow_id_to_return, "คืนแล้ว", str(date.today())
-        )
-        update_row_status("equipments", eq_id, "พร้อมใช้งาน")
-
-        st.success("✅ บันทึกรับคืนอุปกรณ์เรียบร้อยแล้ว!")
+elif menu == "ดูประวัติและรายการยืมทั้งหมด":
+    st.subheader("📋 รายการข้อมูลการยืมทั้งหมดในระบบ")
+    
+    if st.button("🔄 รีเฟรชข้อมูล"):
         st.rerun()
+        
+    try:
+        data = sheet_borrowings.get_all_records()
+        if data:
+            df = pd.DataFrame(data)
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info("ยังไม่มีข้อมูลการยืมในระบบ")
+    except Exception as e:
+        st.warning(f"ยังไม่สามารถดึงข้อมูลมาแสดงได้: {e}")
