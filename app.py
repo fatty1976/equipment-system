@@ -148,7 +148,7 @@ df_borrowings = get_data("borrowings")
 
 # --- เมนูที่ 1: แดชบอร์ดภาพรวม ---
 if choice == "📊 แดชบอร์ดภาพรวม":
-  st.title("📊 แดชบอร์ดสรุปสถานะคลังกายอุปกรณ์ตามชนิด")
+  st.title("📊 กายอุปกรณ์จำแนกตามชนิด")
   st.write("")
 
   categories = [
@@ -158,7 +158,7 @@ if choice == "📊 แดชบอร์ดภาพรวม":
       ("อื่นๆ", "card-other", "📦"),
   ]
 
-  st.subheader("📦 สรุปยอดแยกตามชนิดอุปกรณ์")
+  st.subheader("📦 สรุปยอดจำแนกตามชนิดกายอุปกรณ์")
   cols = st.columns(4)
 
   for i, (cat_name, css_class, icon_emoji) in enumerate(categories):
@@ -195,7 +195,7 @@ if choice == "📊 แดชบอร์ดภาพรวม":
 
   st.divider()
 
-  st.subheader("📋 รายการอุปกรณ์ทั้งหมดในคลัง พร้อมรูปภาพ")
+  st.subheader("📋 รายการกายอุปกรณ์ทั้งหมดในคลัง พร้อมรูปภาพ")
   if df_equipments.empty:
     st.info("💡 ยังไม่มีข้อมูลอุปกรณ์ในระบบ กรุณาเพิ่มอุปกรณ์ใหม่")
   else:
@@ -231,7 +231,7 @@ if choice == "📊 แดชบอร์ดภาพรวม":
           )
         st.divider()
 
-  st.subheader("📌 รายการอุปกรณ์ที่กำลังถูกยืมขณะนี้")
+  st.subheader("📌 รายการกายอุปกรณ์ที่กำลังถูกยืมขณะนี้")
   if not df_borrowings.empty and "status" in df_borrowings.columns:
     current_borrowed = df_borrowings[df_borrowings["status"] == "กำลังยืม"]
     if current_borrowed.empty:
@@ -298,14 +298,14 @@ elif choice == "➕ เพิ่มอุปกรณ์ใหม่":
 
 # --- เมนูที่ 4: ทำรายการยืม ---
 elif choice == "📝 ทำรายการยืม":
-  st.subheader("📝 บันทึกการยืมอุปกรณ์")
+  st.subheader("📝 บันทึกการยืมกายอุปกรณ์")
 
   if df_equipments.empty:
-    st.warning("⚠️ ไม่มีข้อมูลอุปกรณ์ในระบบ")
+    st.warning("⚠️ ไม่มีข้อมูลกายอุปกรณ์ในระบบ")
   else:
     available_eq = df_equipments[df_equipments["status"] == "พร้อมใช้งาน"]
     if available_eq.empty:
-      st.warning("⚠️ ไม่มีอุปกรณ์ที่พร้อมให้ยืมในขณะนี้")
+      st.warning("⚠️ ไม่มีกายอุปกรณ์ที่พร้อมให้ยืมในขณะนี้")
     else:
       with st.form("borrow_form"):
         available_eq["display_name"] = (
@@ -321,7 +321,7 @@ elif choice == "📝 ทำรายการยืม":
         )
 
         selected_eq_name = st.selectbox(
-            "เลือกอุปกรณ์ที่ต้องการยืม", list(eq_dict.keys())
+            "เลือกกายอุปกรณ์ที่ต้องการยืม", list(eq_dict.keys())
         )
         borrower_name = st.text_input("ชื่อ-นามสกุล ผู้ยืม")
         phone = st.text_input("เบอร์โทรศัพท์ติดต่อ")
@@ -355,8 +355,8 @@ elif choice == "📝 ทำรายการยืม":
           st.rerun()
 
 # --- เมนูที่ 5: คืนอุปกรณ์ ---
-elif choice == "🔄 คืนอุปกรณ์":
-  st.subheader("🔄 บันทึกรับคืนอุปกรณ์")
+elif choice == "🔄 คืนกายอุปกรณ์":
+  st.subheader("🔄 บันทึกรับคืนกายอุปกรณ์")
 
   if df_borrowings.empty or "status" not in df_borrowings.columns:
     st.info("🎉 ไม่มีอุปกรณ์ค้างยืมในขณะนี้")
